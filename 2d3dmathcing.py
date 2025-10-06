@@ -235,20 +235,15 @@ if __name__ == "__main__":
     Camera2World_Transform_Matrixs = Camera2World_Transform_Matrixs[np.array(ordered_index)]
 
     # Create cube
-    # cube = o3d.geometry.TriangleMesh.create_box(width=0.5, height=0.5, depth=0.5)
     cube = create_colored_pointcube(shift=np.array([0, 0, 1]), size=0.5, points_per_face=64, sphere_radius=0.01)
-    # cube.compute_vertex_normals()
-    # cube.paint_uniform_color([1, 0.706, 0])
-    # cube.translate([0, 0, 0])
 
     width, height = 1080, 1920
     intrinsic = o3d.camera.PinholeCameraIntrinsic(width, height, 1868.27, 1869.18, 540, 960)
     
     renderer = o3d.visualization.rendering.OffscreenRenderer(width, height)
     scene = renderer.scene
-    scene.set_background([0, 0, 0, 0])  # 透明背景
-    scene.scene.set_sun_light(np.array([[0], [0], [0]]), np.array([[1], [1], [1]]), 1)  # 可微調
-    # scene.scene.set_lighting(o3d.visualization.rendering.Scene.LightingProfile.NO_SHADOWS, np.array([0,0,0]))
+    scene.set_background([0, 0, 0, 0])
+    scene.scene.set_sun_light(np.array([[0], [0], [0]]), np.array([[1], [1], [1]]), 1)
 
     mat = o3d.visualization.rendering.MaterialRecord()
     mat.shader = "defaultLit"
@@ -280,7 +275,7 @@ if __name__ == "__main__":
 
         img_cube_o3d = renderer.render_to_image()                # RGBA image (Open3D image)
         depth_cube_o3d = renderer.render_to_depth_image(True)    # float depth in camera-space
-        img_cube = np.asarray(img_cube_o3d)                      # H x W x 4, uint8
+        img_cube = np.asarray(img_cube_o3d)
         depth_cube = np.asarray(depth_cube_o3d)
 
         real_img = cv2.imread(str(photo_path), cv2.IMREAD_COLOR)
@@ -301,8 +296,10 @@ if __name__ == "__main__":
                 result[..., c]
             )
 
+        # output the picture
         result_uint8 = np.clip(result, 0, 255).astype(np.uint8)
         result_bgr = cv2.cvtColor(result_uint8, cv2.COLOR_RGB2BGR)
+
         out_path = str(output_dir / Path(f"augmented_{i:03d}.png"))
         output_images_path.append(out_path)
         cv2.imwrite(out_path, result_bgr)
@@ -311,14 +308,13 @@ if __name__ == "__main__":
         scene.add_geometry("pcd", pcd, mat)
         scene.add_geometry("cube", cube, cube_mat)
     
+    # make gif
     import imageio.v2 as imageio
     DURATION = 0.08
 
-    # 讀取之前儲存的所有 augmented 圖片
     frames = []
     for path in output_images_path:
         frames.append(imageio.imread(str(path)))
-
-    # 將影像序列轉成 GIF
+ 
     imageio.mimsave("AR_camera_trajectory.gif", frames, duration=DURATION, loop=0)
 
