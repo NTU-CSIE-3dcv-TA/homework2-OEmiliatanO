@@ -32,8 +32,8 @@ def pnpsolver(query,model,cameraMatrix=0,distortion=0):
 
     # solve PnP problem using OpenCV
     FLANN_INDEX_KDTREE = 1
-    index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-    search_params = dict(checks=50)
+    index_params = {'algorithm': FLANN_INDEX_KDTREE, 'trees': 5}
+    search_params = {'checks': 50}
     flann = cv2.FlannBasedMatcher(index_params, search_params)
 
     matches = flann.knnMatch(desc_query, desc_model, k=2)
@@ -184,9 +184,12 @@ if __name__ == "__main__":
         desc_query = np.array(points["DESCRIPTORS"].to_list()).astype(np.float32)
 
         # Find correspondance and solve pnp
-        retval, rvec, tvec, inliers = pnpsolver((kp_query, desc_query), (kp_model, desc_model))
+        success, rvec, tvec, inliers = pnpsolver((kp_query, desc_query), (kp_model, desc_model))
+        if not success:
+            print(f"WARNING: Cannot solve the PNP problem (the {idx}-th image). Skip this image.")
+            continue
         rotq = R.from_rotvec(rvec.reshape(1,3)).as_quat() # Convert rotation vector to quaternion
-        tvec = tvec.reshape(1,3) # Reshape translation vector
+        tvec = tvec.reshape(1,3)
         r_list.append(rvec)
         t_list.append(tvec)
 
@@ -230,7 +233,7 @@ if __name__ == "__main__":
     output_dir = Path("outputs/")
     os.makedirs(output_dir, exist_ok=True)
 
-    # Reorder the camera pose, from right to left
+    # Reorder the camera pose
     Camera2World_Transform_Matrixs = np.array(Camera2World_Transform_Matrixs)
     Camera2World_Transform_Matrixs = Camera2World_Transform_Matrixs[np.array(ordered_index)]
 
@@ -259,6 +262,7 @@ if __name__ == "__main__":
     
     DEPTH_EPS = 1e-8
     output_images_path = []
+    video_writer = cv2.VideoWriter('AR_camera_trajectory.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 5, (width, height))
     for i, (c2w, photo_path) in tqdm(enumerate(zip(Camera2World_Transform_Matrixs, photo_paths)), total=len(photo_paths), desc="Rendering pictures with a virtual cube"):
         w2c = np.linalg.inv(c2w)
         renderer.setup_camera(intrinsic, w2c)
@@ -303,18 +307,12 @@ if __name__ == "__main__":
         out_path = str(output_dir / Path(f"augmented_{i:03d}.png"))
         output_images_path.append(out_path)
         cv2.imwrite(out_path, result_bgr)
+        video_writer.write(result_bgr)
 
         scene.remove_geometry("cube")
         scene.add_geometry("pcd", pcd, mat)
         scene.add_geometry("cube", cube, cube_mat)
     
-    # make gif
-    import imageio.v2 as imageio
-    DURATION = 0.08
-
-    frames = []
-    for path in output_images_path:
-        frames.append(imageio.imread(str(path)))
- 
-    imageio.mimsave("AR_camera_trajectory.gif", frames, duration=DURATION, loop=0)
-
+    # make video
+    video_writer.release()
+    print("Outputs the video at ./AR_camera_trajectory.mp4")
