@@ -50,8 +50,6 @@ def pnpsolver(query,model,cameraMatrix=0,distortion=0):
     flags=cv2.SOLVEPNP_ITERATIVE
     # flags=cv2.SOLVEPNP_EPNP
     # flags=cv2.SOLVEPNP_P3P
-    # flags=cv2.SOLVEPNP_DLS
-    # flags=cv2.SOLVEPNP_UPNP
     success, rvec, tvec, inliers = cv2.solvePnPRansac(
         pts_3d, pts_2d, cameraMatrix, distCoeffs,
         flags=flags
