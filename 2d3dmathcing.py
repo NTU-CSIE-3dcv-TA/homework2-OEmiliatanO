@@ -199,8 +199,8 @@ if __name__ == "__main__":
         # Calculate error
         r_error = rotation_error(rotq_gt, rotq)
         t_error = translation_error(tvec_gt, tvec)
-        rotation_error_list.append(r_error)
-        translation_error_list.append(t_error)
+        rotation_error_list.append(r_error.item())
+        translation_error_list.append(t_error.item())
 
     # calculate median of relative rotation angle differences and translation differences and print them
     median_idx = len(rotation_error_list) // 2
